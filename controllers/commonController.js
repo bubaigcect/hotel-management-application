@@ -1,7 +1,12 @@
+// Dependencies
 require('dotenv').config();
-const ApiMessages = require('../config/ApiMessages');
+const validator = require("validator");
 
-let commonController = function () { };
+// Common Files
+const apiMessages = require('../config/apiMessages');
+const logger = require("../utils/logger");
+
+const commonController = {};
 
 // Common Response Handler
 commonController.commonResponseHandler = (res, result) => {
@@ -9,7 +14,8 @@ commonController.commonResponseHandler = (res, result) => {
         try {
             if(result.success) {
                 if(!res.headerSent) {
-                    resolve(res.status(200).json(result))
+                    logger.info(JSON.stringify(result));
+                    resolve(res.status(200).json(result));
                 }
                 else {
                     resolve('Already sent');
@@ -20,14 +26,15 @@ commonController.commonResponseHandler = (res, result) => {
                     if(result.extras.code == 404) code = 404;
                     else if(result.extras.code == 500) code = 500;
                     else if(result.extras.code == 503) code = 503;
-                    resolve(res.status(code).json(await commonErrorHandler(result)));
+                    logger.error(JSON.stringify(result));
+                    resolve(res.status(code).json(await commonController.commonErrorHandler(result)));
                 }
                 else {
                     resolve('Already sent');
                 }
             } else {
                 if (!res.headerSent) {
-                    resolve(res.status(400).json({ success: false, extras: { code: ApiMessages.SERVER_ERROR.code, msg: ApiMessages.SERVER_ERROR.description } }));
+                    resolve(res.status(500).json({ success: false, extras: { code: apiMessages.SERVER_ERROR.code, msg: apiMessages.SERVER_ERROR.description } }));
                 }
                 else {
                     resolve('Already sent');
@@ -45,9 +52,9 @@ commonController.commonErrorHandler = (error) => {
         try {
             if(typeof error.success === "undefined" || error.success === null) {
                 if (error instanceof SyntaxError) {
-                    resolve({ success: false, extras: { code: ApiMessages.SERVER_ERROR.code, msg: ApiMessages.SERVER_ERROR.description } });
+                    resolve({ success: false, extras: { code: apiMessages.SERVER_ERROR.code, msg: apiMessages.SERVER_ERROR.description } });
                 } else {
-                    resolve({ success: false, extras: { code: ApiMessages.SERVICE_UNAVAILABLE.code, msg: ApiMessages.SERVICE_UNAVAILABLE.description } });
+                    resolve({ success: false, extras: { code: apiMessages.SERVICE_UNAVAILABLE.code, msg: apiMessages.SERVICE_UNAVAILABLE.description } });
                 }
             } else {
                 resolve(error);
@@ -58,20 +65,38 @@ commonController.commonErrorHandler = (error) => {
     });
 }
 
-commonController.commonPhoneNumberValidation = PhoneNumber => {
+commonController.commonPhoneNumberValidation = phoneNumber => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (PhoneNumber === null || PhoneNumber === undefined || PhoneNumber === "") {
+            if (phoneNumber === null || phoneNumber === undefined || phoneNumber === "") {
                 resolve("Validated Successfully");
             } else {
-                if (validator.isMobilePhone(String(PhoneNumber), "en-IN")) {
+                if (validator.isMobilePhone(String(phoneNumber), "en-IN")) {
                     resolve("Validated Successfully");
                 } else {
-                    throw { success: false, extras: { code: 2, msg: ApiMessages.INVALID_PHONENUMBER } }
+                    throw { success: false, extras: { code: apiMessages.INVALID_PHONENUMBER.code, msg: apiMessages.INVALID_PHONENUMBER.description } }
                 }
             }
         } catch (error) {
-            reject(await CommonController.Common_Error_Handler(error));
+            reject(await commonController.commonErrorHandler(error));
+        }
+    });
+}
+
+commonController.commonEmailValidation = emailID => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (emailID === null || emailID === undefined || emailID === "") {
+                resolve("Validated Successfully");
+            } else {
+                if (validator.isEmail(emailID)) {
+                    resolve("Validated Successfully");
+                } else {
+                    throw { success: false, extras: { code: apiMessages.INVALID_EMAIL_FORMAT.code, msg: apiMessages.INVALID_EMAIL_FORMAT.description } }
+                }
+            }
+        } catch (error) {
+            reject(await commonController.commonErrorHandler(error));
         }
     });
 }

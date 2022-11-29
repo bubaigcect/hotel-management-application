@@ -1,7 +1,8 @@
+
+//Dependencies
 const mongoose = require("mongoose");
 require('dotenv').config();
 
-// mongoose.Promise = global.Promise;
 const connectToDb = async () => {
     let mongoURL = process.env.DATABASE_URL;
     let options = {
