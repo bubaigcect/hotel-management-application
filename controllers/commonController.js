@@ -5,6 +5,7 @@ const validator = require("validator");
 // Common Files
 const apiMessages = require('../config/apiMessages');
 const logger = require("../utils/logger");
+const jwt = require('jsonwebtoken');
 
 const commonController = {};
 
@@ -14,6 +15,7 @@ commonController.commonResponseHandler = (res, result) => {
         try {
             if(result.success) {
                 if(!res.headerSent) {
+                    // Log Success Response
                     logger.info(JSON.stringify(result));
                     resolve(res.status(200).json(result));
                 }
@@ -23,9 +25,12 @@ commonController.commonResponseHandler = (res, result) => {
             } else if(!result.success) {
                 if(!res.headerSent) {
                     let code = 400;
-                    if(result.extras.code == 404) code = 404;
-                    else if(result.extras.code == 500) code = 500;
-                    else if(result.extras.code == 503) code = 503;
+                    if(result.extras) {
+                        if(result.extras.code == 404) code = 404;
+                        else if(result.extras.code == 500) code = 500;
+                        else if(result.extras.code == 503) code = 503;
+                    }
+                    // Log Error Response
                     logger.error(JSON.stringify(result));
                     resolve(res.status(code).json(await commonController.commonErrorHandler(result)));
                 }
@@ -34,7 +39,10 @@ commonController.commonResponseHandler = (res, result) => {
                 }
             } else {
                 if (!res.headerSent) {
-                    resolve(res.status(500).json({ success: false, extras: { code: apiMessages.SERVER_ERROR.code, msg: apiMessages.SERVER_ERROR.description } }));
+                    let response = { success: false, extras: { code: apiMessages.SERVER_ERROR.code, msg: apiMessages.SERVER_ERROR.description } };
+                    // Log Error Response
+                    logger.error(JSON.stringify(response));
+                    resolve(res.status(500).json(response));
                 }
                 else {
                     resolve('Already sent');
@@ -51,11 +59,18 @@ commonController.commonErrorHandler = (error) => {
     return new Promise((resolve, reject) => {
         try {
             if(typeof error.success === "undefined" || error.success === null) {
+                // Log Actual Error
+                logger.error(error);
+
+                let response = {};
                 if (error instanceof SyntaxError) {
-                    resolve({ success: false, extras: { code: apiMessages.SERVER_ERROR.code, msg: apiMessages.SERVER_ERROR.description } });
+                    response = { success: false, extras: { code: apiMessages.SERVER_ERROR.code, msg: apiMessages.SERVER_ERROR.description } };
                 } else {
-                    resolve({ success: false, extras: { code: apiMessages.SERVICE_UNAVAILABLE.code, msg: apiMessages.SERVICE_UNAVAILABLE.description } });
+                    response = { success: false, extras: { code: apiMessages.SERVICE_UNAVAILABLE.code, msg: apiMessages.SERVICE_UNAVAILABLE.description } };
                 }
+                // Log Error Response
+                logger.error(JSON.stringify(response));
+                resolve(response);
             } else {
                 resolve(error);
             }
@@ -95,6 +110,28 @@ commonController.commonEmailValidation = emailID => {
                     throw { success: false, extras: { code: apiMessages.INVALID_EMAIL_FORMAT.code, msg: apiMessages.INVALID_EMAIL_FORMAT.description } }
                 }
             }
+        } catch (error) {
+            reject(await commonController.commonErrorHandler(error));
+        }
+    });
+}
+
+commonController.generateToken = (userData) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const payload = {};
+            payload.userID = userData.userID;
+            payload.name = userData.name;
+            payload.emailID = userData.emailID;
+            payload.type = userData.type;
+
+            const headers = {};
+            headers.expiresIn = process.env.JWT_EXPIRYSECONDS;
+            headers.algorithm = process.env.JWT_ALGORITHM;
+
+            let accessToken = jwt.sign(payload, process.env.JWT_SECRET, headers);
+            console.log("JWT Token- ", accessToken);
+            resolve(accessToken);
         } catch (error) {
             reject(await commonController.commonErrorHandler(error));
         }

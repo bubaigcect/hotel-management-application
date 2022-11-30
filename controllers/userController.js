@@ -20,17 +20,26 @@ userController.loginWithPassword = (values, userData) => {
                 let passwordSalt = userData.passwordSalt;
                 let pass = password + passwordSalt;
                 let passwordHash = crypto.createHash('sha512').update(pass).digest("hex");
-                console.log("PasswordHAsh- ", passwordHash);
                 if (userData.passwordHash === passwordHash) {
-                    console.log("Entered password match sections");
-                    // let result = await userController.Common_Login_Functionality_Response(UserData, DeviceData);
-                    // resolve(result);
-                    delete userData.passwordHash;
-                    delete userData.passwordSalt;
-                    delete userData.passwordHash;
+                    // Generate JWT Token
+                    const accessToken = await commonController.generateToken(userData);
 
-                    resolve({ success: true, extras: { msg: apiMessages.LOGIN_SUCCESSFULLY.description, Data: userData } });
+                    // Response data
+                    const response = {};
+                    response.userID = userData.userID;
+                    response.name = userData.name;
+                    response.emailID = userData.emailID;
+                    response.status = userData.status;
+                    response.type = userData.type;
+                    response.accessToken = accessToken;
 
+                    //1.Male 2.Female 3.Other 4. Prefer not to say
+                    if(userData.gender === 1) userData.gender = 'Male';
+                    else if(userData.gender === 2) userData.gender = 'Female';
+                    else if(userData.gender === 3) userData.gender = 'Other';
+                    else if(userData.gender === 4) userData.gender = 'Prefer not to say';
+
+                    resolve({ success: true, extras: { msg: apiMessages.LOGIN_SUCCESSFULLY.description, Data: response } });
                 } else {
                     throw { success: false, extras: { code: apiMessages.INVALID_PASSWORD.code, msg: apiMessages.INVALID_PASSWORD.description } };
                 }
@@ -47,7 +56,7 @@ userController.validateEmailExist = values => {
             let query = {
                 emailID: values.emailID
             };
-            let result = await users.findOne(query).select('-_id -_v').lean();
+            let result = await users.findOne(query, {}).lean();
             if (result === null) {
                 throw { success: false, extras: { code: apiMessages.EMAIL_NOT_REGISTERED_CONTACT_ADMIN.code, msg: apiMessages.EMAIL_NOT_REGISTERED_CONTACT_ADMIN.description } }
             } else {

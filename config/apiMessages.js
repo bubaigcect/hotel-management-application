@@ -8,15 +8,18 @@ apiMessages.SERVICE_UNAVAILABLE = {code: 503, description: 'This service is curr
 
 // For Required Error
 apiMessages.ENTER_ALL_TAGS = {code: 1000, description: 'Enter all tags.'};
+apiMessages.TOKEN_REQUIRED = {code: 1001, description: 'Access token is required.'};
 
 // For Invalid Error
 apiMessages.INVALID_PHONENUMBER = {code: 3000, description: 'Invalid phone number.'};
 apiMessages.INVALID_EMAIL_FORMAT = {code: 3001, description: 'Invalid email format.'};
 apiMessages.INVALID_PASSWORD = {code: 3002, description: 'Invalid password.'};
+apiMessages.JWT_MALFORMED = {code: 3003, description: 'Invalid token.'};
 
 // For Others Error
 apiMessages.EMAIL_NOT_REGISTERED_CONTACT_ADMIN = {code: 4000, description: 'Email Id is not registered. Please contact admin.'};
 apiMessages.ACCOUNT_NOT_ACTIVE = {code: 4001, description: 'Account not Active.'};
+apiMessages.TOKEN_EXPIRED = {code: 4002, description: 'Your access token has been expired.'};
 
 // For Success Message
 apiMessages.LOGIN_SUCCESSFULLY = { description: 'Login Successfully.' };
