@@ -5,13 +5,13 @@ require('dotenv').config();
 
 // Common Files
 const userMediators = require('../mediators/userMediators');
+const adminRouter = require('../routes/admin');
+
 
 // Login
 router.post('/login', userMediators.loginWithPassword);
 
-// use middleware to check authentication
-router.use(userMediators.verifyToken);
-
-router.post('/add-user', userMediators.addUser);
+// Admin Api's
+router.use('/admin', adminRouter);
 
 module.exports = router;

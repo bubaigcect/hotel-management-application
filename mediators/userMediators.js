@@ -53,15 +53,106 @@ userMediator.verifyToken = async (req, res, next) => {
     }
 }
 
-// For Add New User
+// For Add New Admin User
 userMediator.addUser = async (req, res) => {
-    console.log(req.userData)
     try{
-        const userData = req.userData;
-        let response = { success: false, extras: { code: apiMessages.SERVER_ERROR.code, msg: apiMessages.SERVER_ERROR.description } };
-        await commonController.commonResponseHandler(res, response);
+        let values = JSON.parse(JSON.stringify(req.body));
+        if(
+            values.name != null &&
+            values.emailID != null &&
+            values.gender != null &&
+            values.password != null
+        ) {
+            await userController.checkWhetherEmailIDAlreadyExist(values);
+            if(values.roleID) await userController.checkWhetherRoleAlreadyExist(values.roleID);
+            if(values.phoneNumber) await commonController.commonPhoneNumberValidation(values.phoneNumber);
+            await commonController.commonPasswordValidation(values.password);
+            values.userID = req.userData.userID;
+            // Now adding type admin static, later we can deside what we can do.
+            values.type = "admin";
+            let result = await userController.addUser(values);
+            await commonController.commonResponseHandler(res, result);
+        } else {
+            throw { success: false, extras: { code: apiMessages.ENTER_ALL_TAGS.code, msg: apiMessages.ENTER_ALL_TAGS.description } };
+        }
     } catch (error) {
-        await commonController.commonErrorHandler(res, error);
+        await commonController.commonResponseHandler(res, error);
+    }
+}
+
+// For Add New Permission
+userMediator.addPermission = async (req, res) => {
+    try{
+        let values = JSON.parse(JSON.stringify(req.body));
+        if(values.name != null) {
+            await userController.checkWhetherPermissionAlreadyExist(values);
+            values.userID = req.userData.userID;
+            let result = await userController.addPermission(values);
+            await commonController.commonResponseHandler(res, result); 
+        } else {
+            throw { success: false, extras: { code: apiMessages.ENTER_ALL_TAGS.code, msg: apiMessages.ENTER_ALL_TAGS.description } };
+        }
+    } catch (error) {
+        await commonController.commonResponseHandler(res, error);
+    }
+}
+
+userMediator.deletePermission = async (req, res) => {
+    try{
+        console.log(req.params.id);
+        if(req.params.id) {
+            let permissionID = req.params.id;
+            let updateData = {
+                status: false,
+            };
+            await userController.checkWhetherPermissionIDValid(permissionID);
+            let result = await userController.updatePermissionData(permissionID, updateData);
+            await commonController.commonResponseHandler(res, result);
+        } else {
+            throw { success: false, extras: { code: apiMessages.ENTER_ALL_TAGS.code, msg: apiMessages.ENTER_ALL_TAGS.description } };
+        }
+    } catch(error) {
+        await commonController.commonResponseHandler(res, error);
+    }
+}
+
+userMediator.updatePermission = async (req, res) => {
+    try{
+        if(req.params.id) {
+            let permissionID = req.params.id;
+            let updateData = {
+                status: false,
+            };
+            await userController.checkWhetherPermissionIDValid(permissionID);
+            let result = await userController.updatePermissionData(permissionID, updateData);
+            await commonController.commonResponseHandler(res, result);
+        } else {
+            throw { success: false, extras: { code: apiMessages.ENTER_ALL_TAGS.code, msg: apiMessages.ENTER_ALL_TAGS.description } };
+        }
+    } catch(error) {
+        await commonController.commonResponseHandler(res, error);
+    }
+}
+
+// For Add New Role
+userMediator.addRole = async (req, res) => {
+    try{
+        let values = JSON.parse(JSON.stringify(req.body));
+        if(
+            values.name != null &&
+            values.permissions != null
+        ) {
+            await commonController.commonPermissionIDValidation(values);
+            await userController.checkWhetherPermissionIDValid(values.permissions);
+            await userController.checkWhetherRoleAlreadyExist(values);
+            values.userID = req.userData.userID;
+            let result = await userController.addRole(values);
+            await commonController.commonResponseHandler(res, result);
+        } else {
+            throw { success: false, extras: { code: apiMessages.ENTER_ALL_TAGS.code, msg: apiMessages.ENTER_ALL_TAGS.description } };
+        }
+    } catch (error) {
+        await commonController.commonResponseHandler(res, error);
     }
 }
 

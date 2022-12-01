@@ -8,6 +8,8 @@ const users = new mongoose.Schema({
     passwordHash: { type: String, default: "" },
     passwordSalt: { type: String, default: "" },
     type: { type: String, default: "user" },
+    roleID: { type: String, default: "" },
+    createdBy: { type: String, default: "" },
     status: { type: Boolean, default: true },
 }, { collection: 'users', timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 users.index({ emailID: -1 });
