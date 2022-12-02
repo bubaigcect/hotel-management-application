@@ -35,6 +35,7 @@ userController.loginWithPassword = (values, userData) => {
                     response.emailID = userData.emailID;
                     response.status = userData.status;
                     response.type = userData.type;
+                    response.roleID = userData.roleID;
                     response.accessToken = accessToken;
 
                     //1.Male 2.Female 3.Other 4. Prefer not to say
@@ -76,18 +77,85 @@ userController.validateEmailExist = values => {
     });
 }
 
-userController.checkWhetherPermissionAlreadyExist = (values) => {
+userController.checkWhetherPermissionAlreadyExist = (values, permissionID = null) => {
     return new Promise(async (resolve, reject) => {
         try {
+            console.log("permissionID --- ", permissionID);
             let query = {
                 name: values.name
             };
             let result = await permissions.findOne(query).lean();
-            if (result === null) {
+            if (result && !permissionID) {
+                throw { success: false, extras: { code: apiMessages.PERMISSION_EXIST.code, msg: apiMessages.PERMISSION_EXIST.description } };
+            }
+            else if (permissionID && result && result.permissionID != permissionID) {
+                console.log("ELSE IF condition");
+                throw { success: false, extras: { code: apiMessages.PERMISSION_EXIST.code, msg: apiMessages.PERMISSION_EXIST.description } };
+            }
+            else {
+                resolve("Validated Successfully");
+            }
+        } catch (error) {
+            reject(await commonController.commonErrorHandler(error));
+        }
+    });
+}
+
+userController.getUserDetails = (userID) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let query = {
+                userID: userID,
+            };
+            let result = await users.findOne(query).select('-_id -__v -createdBy -updatedBy -passwordHash -passwordSalt').lean();
+            
+            //1.Male 2.Female 3.Other 4. Prefer not to say
+            if(result.gender === 1) result.gender = 'Male';
+            else if(result.gender === 2) result.gender = 'Female';
+            else if(result.gender === 3) result.gender = 'Other';
+            else if(result.gender === 4) result.gender = 'Prefer not to say';
+
+            if (result && result.status) {
+                resolve({ success: true, extras: { data: result } });
+            } else if (result && !result.status) {
+                throw { success: false, extras: { code: apiMessages.ACCOUNT_NOT_ACTIVE.code, msg: apiMessages.ACCOUNT_NOT_ACTIVE.description } };
+            } else {
+                throw { success: false, extras: { code: apiMessages.USER_DOES_EXIST.code, msg: apiMessages.USER_DOES_EXIST.description } };
+            }
+        } catch (error) {
+            reject(await commonController.commonErrorHandler(error));
+        }
+    });
+}
+
+// Check UserID Exists
+userController.checkWhetherUserIDValid = (userIDs) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let result = false;
+            if (Array.isArray(userIDs)) {
+                for(let userID of userIDs) {
+                    let query = {
+                        userID: userID,
+                        status: true
+                    };
+                    result = await users.exists(query);
+                    if(!result) break;
+                }
+            }
+            else {
+                let query = {
+                    userID: userIDs,
+                    status: true
+                };
+                result = await users.exists(query);
+            }
+
+            if (result) {
                 resolve("Validated Successfully");
             } else {
-                throw { success: false, extras: { code: apiMessages.PERMISSION_EXIST.code, msg: apiMessages.PERMISSION_EXIST.description } };
-            };
+                throw { success: false, extras: { code: apiMessages.USER_DOES_EXIST.code, msg: apiMessages.USER_DOES_EXIST.description } };
+            }
         } catch (error) {
             reject(await commonController.commonErrorHandler(error));
         }
@@ -234,34 +302,52 @@ userController.updatePermissionData = (permissionID, updateData) => {
             let fndupdchanges = {
                 $set: updateData
             };
-            // let fndupdoptions = {
-            //     upsert: true,
-            //     setDefaultsOnInsert: true,
-            //     new: true
-            // }
-            
-            await permissions.findOneAndUpdate(fndupdquery, fndupdchanges).lean();
+            let fndupdoptions = {
+                upsert: true,
+                setDefaultsOnInsert: true,
+                new: true,
+            }
+
+            await permissions.findOneAndUpdate(fndupdquery, fndupdchanges, fndupdoptions).select('-_id -__v').lean();
             let msg = apiMessages.UPDATED_SUCCESSFULLY.description;
-            console.log("TypeOF", typeof updateData.status)
             if(typeof updateData.status == "boolean") msg = apiMessages.DELETED_SUCCESSFULLY.description;
             resolve({ success: true, extras: { msg: msg } });
         } catch (error) {
-
+            reject(await commonController.commonErrorHandler(error));
         }
     });
-} 
+}
 
-userController.checkWhetherRoleAlreadyExist = (values) => {
+userController.checkWhetherPermissionAlreadyExist = (values, permissionID = null) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            console.log("permissionID --- ", permissionID);
+            let query = {
+                name: values.name
+            };
+            let result = await permissions.findOne(query).lean();
+            if ((result && !permissionID) || (permissionID && result && result.permissionID != permissionID)) {
+                throw { success: false, extras: { code: apiMessages.PERMISSION_EXIST.code, msg: apiMessages.PERMISSION_EXIST.description } };
+            } else {
+                resolve("Validated Successfully");
+            }
+        } catch (error) {
+            reject(await commonController.commonErrorHandler(error));
+        }
+    });
+}
+
+userController.checkWhetherRoleAlreadyExist = (values, roleID = null) => {
     return new Promise(async (resolve, reject) => {
         try{
             let query = {
                 name: values.name
             };
             let result = await roles.findOne(query).lean();
-            if(result === null) {
-                resolve("Validate Successfully");
-            } else {
+            if(( result && !roleID ) || (roleID && result && result.roleID != roleID)) {
                 throw { success: false, extras: { code: apiMessages.ROLE_EXIST.code, msg: apiMessages.ROLE_EXIST.description } };
+            } else {
+                resolve("Validate Successfully");
             }
         } catch (error) {
             reject(await commonController.commonErrorHandler(error));
@@ -288,29 +374,30 @@ userController.addRole = (values) => {
     });
 }
 
-// AdminController.Create_Super_Admin = (values) => {
-//     return new Promise(async (resolve, reject) => {
-//         try {
-//             let Password = String(values.Password);
-//             let PasswordSalt = await CommonController.Random_OTP_Number();
-//             let pass = Password + PasswordSalt;
-//             let Data = {
-//                 AdminID: uuid.v4(),
-//                 Name: values.Name,
-//                 EmailID: values.EmailID,
-//                 PhoneNumber: values.PhoneNumber,
-//                 PasswordHash: crypto.createHash('sha512').update(pass).digest("hex"),
-//                 PasswordSalt: PasswordSalt,
-//                 Roles: {
-//                     Whether_Super_Admin: true
-//                 },
-//             };
-//             let SaveResult = await Admins(Data).save();
-//             resolve({ success: true, extras: { Status: CommonMessages.CREATED_SUCCESSFULLY } });
-//         } catch (error) {
-//             reject(await CommonController.Common_Error_Handler(error));
-//         }
-//     });
-// }
+userController.updateRoleData = (roleID, updateData) => {
+    return new Promise(async (resolve, reject) => {
+        try{
+            let fndupdquery = {
+                roleID
+            };
+            let fndupdchanges = {
+                $set: updateData
+            };
+            let fndupdoptions = {
+                upsert: true,
+                setDefaultsOnInsert: true,
+                new: true,
+                multi: true
+            }
+            await roles.findOneAndUpdate(fndupdquery, fndupdchanges, fndupdoptions).select('-_id -_v').lean();
+
+            let msg = apiMessages.UPDATED_SUCCESSFULLY.description;
+            if(typeof updateData.status == "boolean") msg = apiMessages.DELETED_SUCCESSFULLY.description;
+            resolve({ success: true, extras: { msg: msg } });
+        } catch (error) {
+
+        }
+    });
+}
 
 module.exports = userController;

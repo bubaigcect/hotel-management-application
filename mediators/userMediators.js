@@ -53,7 +53,7 @@ userMediator.verifyToken = async (req, res, next) => {
     }
 }
 
-// For Add New Admin User
+// For User
 userMediator.addUser = async (req, res) => {
     try{
         let values = JSON.parse(JSON.stringify(req.body));
@@ -80,7 +80,21 @@ userMediator.addUser = async (req, res) => {
     }
 }
 
-// For Add New Permission
+userMediator.getUserDetails = async (req, res) => {
+    try{
+        if(req.params.id) {
+            let userID = req.params.id;
+            let result = await userController.getUserDetails(userID);
+            await commonController.commonResponseHandler(res, result); 
+        } else {
+            throw { success: false, extras: { code: apiMessages.ENTER_ALL_TAGS.code, msg: apiMessages.ENTER_ALL_TAGS.description } };
+        }
+    } catch (error) {
+        await commonController.commonResponseHandler(res, error);
+    }
+}
+
+// For Permission
 userMediator.addPermission = async (req, res) => {
     try{
         let values = JSON.parse(JSON.stringify(req.body));
@@ -97,30 +111,33 @@ userMediator.addPermission = async (req, res) => {
     }
 }
 
-userMediator.deletePermission = async (req, res) => {
-    try{
-        console.log(req.params.id);
-        if(req.params.id) {
-            let permissionID = req.params.id;
-            let updateData = {
-                status: false,
-            };
-            await userController.checkWhetherPermissionIDValid(permissionID);
-            let result = await userController.updatePermissionData(permissionID, updateData);
-            await commonController.commonResponseHandler(res, result);
-        } else {
-            throw { success: false, extras: { code: apiMessages.ENTER_ALL_TAGS.code, msg: apiMessages.ENTER_ALL_TAGS.description } };
-        }
-    } catch(error) {
-        await commonController.commonResponseHandler(res, error);
-    }
-}
-
 userMediator.updatePermission = async (req, res) => {
     try{
+        let values = JSON.parse(JSON.stringify(req.body));
+        if(req.params.id != null) {
+            let permissionID = req.params.id;
+            let updateData = {
+                updatedBy: req.userData.userID,
+                ...values
+            };
+            await userController.checkWhetherPermissionIDValid(permissionID);
+            if(values.name) await userController.checkWhetherPermissionAlreadyExist(values, permissionID);
+            let result = await userController.updatePermissionData(permissionID, updateData);
+            await commonController.commonResponseHandler(res, result);
+        } else {
+            throw { success: false, extras: { code: apiMessages.ENTER_ALL_TAGS.code, msg: apiMessages.ENTER_ALL_TAGS.description } };
+        }
+    } catch(error) {
+        await commonController.commonResponseHandler(res, error);
+    }
+}
+
+userMediator.deletePermission = async (req, res) => {
+    try{
         if(req.params.id) {
             let permissionID = req.params.id;
             let updateData = {
+                updatedBy: req.userData.userID,
                 status: false,
             };
             await userController.checkWhetherPermissionIDValid(permissionID);
@@ -134,7 +151,7 @@ userMediator.updatePermission = async (req, res) => {
     }
 }
 
-// For Add New Role
+// For Role
 userMediator.addRole = async (req, res) => {
     try{
         let values = JSON.parse(JSON.stringify(req.body));
@@ -147,6 +164,47 @@ userMediator.addRole = async (req, res) => {
             await userController.checkWhetherRoleAlreadyExist(values);
             values.userID = req.userData.userID;
             let result = await userController.addRole(values);
+            await commonController.commonResponseHandler(res, result);
+        } else {
+            throw { success: false, extras: { code: apiMessages.ENTER_ALL_TAGS.code, msg: apiMessages.ENTER_ALL_TAGS.description } };
+        }
+    } catch (error) {
+        await commonController.commonResponseHandler(res, error);
+    }
+}
+
+userMediator.updateRole = async (req, res) => {
+    try {
+        let values = JSON.parse(JSON.stringify(req.body));
+        if(req.params.id != null) {
+            let roleID = req.params.id;
+            let updateData = {
+                updatedBy: req.userData.userID,
+                ...values
+            };
+            await userController.checkWhetherRoleIDValid(roleID);
+            if(values.name) await userController.checkWhetherRoleAlreadyExist(values, roleID);
+            if(values.permissions) await commonController.commonPermissionIDValidation(values);
+            let result = await userController.updateRoleData(roleID, updateData);
+            await commonController.commonResponseHandler(res, result);
+        } else {
+            throw { success: false, extras: { code: apiMessages.ENTER_ALL_TAGS.code, msg: apiMessages.ENTER_ALL_TAGS.description } };
+        }
+    } catch (error) {
+        await commonController.commonResponseHandler(res, error);
+    }
+}
+
+userMediator.deleteRole = async (req, res) => {
+    try{
+        if(req.params.id) {
+            let roleID = req.params.id;
+            let updateData = {
+                updatedBy: req.userData.userID,
+                status: false,
+            };
+            await userController.checkWhetherRoleIDValid(roleID);
+            let result = await userController.updateRoleData(roleID, updateData);
             await commonController.commonResponseHandler(res, result);
         } else {
             throw { success: false, extras: { code: apiMessages.ENTER_ALL_TAGS.code, msg: apiMessages.ENTER_ALL_TAGS.description } };

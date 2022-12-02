@@ -30,6 +30,7 @@ apiMessages.PASSWORD_MUST_BE_BETWEEN_6_AND_16_CHARACTERS = {code: 4008, descript
 apiMessages.PASSWORD_MUST_HAVE_ATLEAST_ONE_NUMBER = {code: 4009, description: 'Password must have atleast one number.'};
 apiMessages.PASSWORD_MUST_HAVE_ATLEAST_ONE_LOWERCASE = {code: 4010, description: 'Password must have atleast one lowercase.'};
 apiMessages.PASSWORD_MUST_HAVE_ATLEAST_ONE_UPPERCASE = {code: 4011, description: 'Password must have atleast one uppercase.'};
+apiMessages.USER_DOES_EXIST = {code: 4011, description: 'User does not exist.'};
 
 // For Success Message
 apiMessages.LOGIN_SUCCESSFULLY = { description: 'Login Successfully.' };
